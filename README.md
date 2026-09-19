@@ -161,20 +161,76 @@ node server.js --port 9000     # 换端口
 
 Python 版参数完全一样：`python lab_inventory.py --host 0.0.0.0 --open`
 
-## 六、文件说明
+## 六、部署到 Cloudflare（云端版，可选）
+
+本机版要求「电脑开着 + 黑窗口开着」才能访问。如果想让手机在外面也能随时打开、网址还固定不变，
+可以把后端部署到 **Cloudflare Workers + D1**（免费额度足够实验室用）。
+
+云端版和本机版**功能完全一致、接口一致**，前端 `web/` 目录两边共用；区别只是数据从本机文件
+换成了 Cloudflare 的 D1 数据库。
+
+```
+cloudflare/worker.js       云端后端（Workers）
+cloudflare/schema.sql      D1 数据库结构
+cloudflare/test-local.mjs  本地自测脚本（不用账号也能跑，47 项检查）
+wrangler.toml              部署配置
+```
+
+**部署步骤**
+
+```bash
+# 0. 先注册 Cloudflare 账号（免费）：https://dash.cloudflare.com/sign-up
+
+# 1. 授权（会打开浏览器，点 Allow）
+npx wrangler login
+
+# 2. 建云端数据库，把输出的 database_id 填进 wrangler.toml
+npx wrangler d1 create lab-inventory
+
+# 3. 建表
+npx wrangler d1 execute lab-inventory --remote --file=cloudflare/schema.sql
+
+# 4. 建第一个超级管理员（把 <哈希> 换成下面脚本生成的）
+#    node -e "const{pbkdf2Sync,randomBytes}=require('node:crypto');const s=randomBytes(16).toString('hex');console.log(s+'$'+pbkdf2Sync('你的密码',s,25000,32,'sha256').toString('hex'))"
+npx wrangler d1 execute lab-inventory --remote --command \
+  "INSERT INTO users(username,display_name,pwd,role,active,created_at) VALUES('root','超级管理员','<哈希>','super',1,'2025-01-01 00:00:00')"
+
+# 5. 部署
+npx wrangler deploy
+# 输出形如 https://lab-inventory.<你的子域名>.workers.dev
+```
+
+**改完代码后重新部署**：`npx wrangler deploy`（前端文件会自动一起上传）
+
+**本地自测**（不需要 Cloudflare 账号，用 Node 内置 SQLite 模拟 D1 跑真实 Worker 代码）：
+
+```bash
+node cloudflare/test-local.mjs
+```
+
+> 注意：云端版的密码哈希迭代次数是 25000（本机版是 200000），
+> 这是为了不超过 Workers 免费版每次请求 10ms 的 CPU 限制；配合登录失败锁定使用。
+> 另外云端版的时间固定按北京时间（UTC+8）记录。
+
+## 七、文件说明
 
 ```
 小程序/
-├─ 启动.bat              ← 双击这个（启动程序）
-├─ 重置密码.bat          ← 忘记密码时双击这个
-├─ server.js             ← 后端服务（Node 版，优先使用，零依赖）
+├─ 启动.bat              ← 双击这个（启动本机版）
+├─ 重置密码.bat          ← 忘记密码时双击这个（仅本机版）
+├─ server.js             ← 本机版后端（Node，零依赖）
 ├─ reset_password.js     ← 重置密码工具
-├─ lab_inventory.py      ← 后端服务（Python 版，备选；未在实机验证过）
-├─ web/
-│  ├─ index.html         ← 页面结构
-│  ├─ style.css          ← 样式
-│  └─ app.js             ← 前端交互
-└─ data/                 ← 你的数据（首次运行自动生成）
-   ├─ db.json            ← 全部数据都在这里
-   └─ backup/            ← 每次启动自动留的备份（保留最近 10 份）
+├─ lab_inventory.py      ← 本机版后端（Python 备选；未在实机验证过）
+├─ web/                  ← 前端页面（本机版 / 云端版共用）
+│  ├─ index.html
+│  ├─ style.css
+│  └─ app.js
+├─ cloudflare/           ← 云端版（Workers + D1）
+│  ├─ worker.js
+│  ├─ schema.sql
+│  └─ test-local.mjs
+├─ wrangler.toml         ← 云端版部署配置
+└─ data/                 ← 本机版的数据（首次运行自动生成，不提交到仓库）
+   ├─ db.json
+   └─ backup/
 ```

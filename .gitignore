@@ -9,6 +9,10 @@ node_modules/
 *.log
 npm-debug.log*
 
+# Cloudflare 本地开发缓存（含本地测试数据库，不要提交）
+.wrangler/
+.dev.vars
+
 # 编辑器、系统垃圾文件
 .vscode/
 .idea/
