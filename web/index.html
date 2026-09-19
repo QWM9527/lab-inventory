@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>实验室物资清点</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<!-- ================= 登录页 ================= -->
+<div id="loginView" class="login-wrap">
+  <form class="login-card" id="loginForm" autocomplete="on">
+    <h1>实验室物资清点</h1>
+    <p class="sub">请使用实验室分配的账号登录</p>
+    <label>账号<input name="username" autocomplete="username" required></label>
+    <label>密码<input name="password" type="password" autocomplete="current-password" required></label>
+    <button class="btn primary block" type="submit">登 录</button>
+    <div class="err" id="loginErr"></div>
+    <p class="tip">账号由实验室管理员分配。忘记密码就找管理员在「人员管理」里重置。</p>
+  </form>
+</div>
+
+<!-- ================= 主界面 ================= -->
+<div id="appView" class="hidden">
+  <header class="topbar">
+    <div class="brand">实验室物资清点 <span class="ver">v3</span></div>
+    <div class="who">
+      <span id="whoName"></span>
+      <span class="badge" id="whoRole"></span>
+      <button class="btn tiny primary admin-only" id="btnUsers">账号管理</button>
+      <button class="btn tiny" id="btnPwd">我的账号</button>
+      <button class="btn tiny ghost" id="btnLogout">退出</button>
+    </div>
+  </header>
+
+  <section class="stats" id="stats"></section>
+
+  <nav class="tabs">
+    <button class="tab active" data-tab="items">物资清单</button>
+    <button class="tab" data-tab="records">出入库流水</button>
+    <button class="tab admin-only" data-tab="users">人员管理</button>
+    <button class="tab" data-tab="help">使用说明</button>
+  </nav>
+
+  <!-- 物资清单 -->
+  <main class="panel active" id="tab-items">
+    <div class="toolbar">
+      <input id="itemSearch" placeholder="搜索名称 / 类别 / 规格 / 位置">
+      <span class="hint member-only hidden">你是普通成员，只能查看。入库 / 领用 / 盘点请找管理员操作。</span>
+      <button class="btn admin-only" id="btnNewItem">+ 新增物资</button>
+    </div>
+    <div class="table-wrap">
+      <table id="itemTable">
+        <thead><tr>
+          <th>物资名称</th><th>类别</th><th>规格</th><th class="num">现有</th>
+          <th>单位</th><th class="num">下限</th><th>存放位置</th><th class="op">操作</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- 流水 -->
+  <main class="panel" id="tab-records">
+    <div class="toolbar wrap">
+      <input id="recKw" placeholder="搜索物资 / 操作人 / 备注">
+      <select id="recType">
+        <option value="">全部类型</option>
+        <option value="in">入库</option>
+        <option value="out">领用</option>
+        <option value="adjust">盘点</option>
+      </select>
+      <input type="date" id="recFrom"><span class="dash">至</span><input type="date" id="recTo">
+      <button class="btn" id="btnRecQuery">查询</button>
+      <button class="btn ghost" id="btnRecReset">重置</button>
+      <button class="btn ghost" id="btnExport">导出 Excel(CSV)</button>
+      <button class="btn danger super-only" id="btnPurge">清理记录</button>
+    </div>
+    <div class="table-wrap">
+      <table id="recTable">
+        <thead><tr>
+          <th>时间</th><th>物资</th><th>类型</th><th class="num">数量</th>
+          <th class="num">变动前</th><th class="num">变动后</th><th>操作人</th><th>备注</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+    <div class="pager">
+      <button class="btn tiny" id="recPrev">上一页</button>
+      <span id="recPageInfo"></span>
+      <button class="btn tiny" id="recNext">下一页</button>
+    </div>
+  </main>
+
+  <!-- 人员管理 -->
+  <main class="panel" id="tab-users">
+    <div class="guide">
+      <b>谁能加人？</b>
+      <span class="step">超级管理员（root）：可新增<b>管理员</b>和普通成员，也能升降任何人的角色</span>
+      <span class="step">管理员：只能新增/管理<b>普通成员</b>，不能造管理员</span>
+      <span class="step">普通成员：看不到这一页</span>
+      <div class="muted" style="margin-top:6px">
+        点成员行末尾的 <b>编辑</b> 可以改他的 <b>姓名、登录账号、密码</b>（角色只有超级管理员能改）。
+        表格里灰色的按钮就是当前账号没权限用的。
+      </div>
+    </div>
+    <div class="toolbar">
+      <span class="hint">当前共 <b id="userCount">0</b> 个账号</span>
+      <button class="btn primary" id="btnNewUser">+ 新增人员</button>
+    </div>
+    <div class="table-wrap">
+      <table id="userTable">
+        <thead><tr><th>登录账号</th><th>姓名</th><th>角色</th><th>状态</th><th class="op">操作</th></tr></thead>
+        <tbody></tbody>
+      </table>
+    </div>
+  </main>
+
+  <!-- 说明 -->
+  <main class="panel" id="tab-help">
+    <div class="doc">
+      <h2>怎么用</h2>
+      <ol>
+        <li><b>入库</b>：点击物资行后面的「入库」，填数量（比如新买了 2 块单片机，就填 2），备注可写采购单号。</li>
+        <li><b>领用</b>：点击「领用」，填数量（拿走 1 块就填 1），备注可写项目名 / 借用人。</li>
+        <li><b>盘点</b>：实物和系统数字对不上时用它，直接填实际数量，系统会记录变动前后。</li>
+        <li>每一笔都会自动记下<b>时间、操作人、数量、变动前后</b>，在「出入库流水」里可随时查询和导出。</li>
+        <li>低于库存下限的物资会标红提醒，方便提前补货。</li>
+        <li>「入库 / 领用 / 盘点」这三个按钮<b>只有管理员有</b>；普通成员打开只能看，按钮位置显示「只读」。</li>
+      </ol>
+      <h2>权限说明</h2>
+      <ul>
+        <li><b>超级管理员</b>：全部权限，外加清理流水记录、管理管理员账号，且账号不会被删除或降级。</li>
+        <li><b>管理员</b>：新增/修改/删除物资、录入入库领用盘点、管理账号、查看全部流水。</li>
+        <li><b>普通成员</b>：<b>只能查看</b>物资清单和出入库流水、导出 CSV；不能录入出入库，也不能改任何数据。</li>
+        <li>密码经 PBKDF2-SHA256 加盐加密存储，数据库里也看不到明文。</li>
+      </ul>
+      <h2>数据与备份</h2>
+      <p>所有数据保存在程序目录下的 <code>data/inventory.db</code>，把这个文件复制走就是完整备份。</p>
+    </div>
+  </main>
+</div>
+
+<!-- ================= 弹窗 ================= -->
+<div class="modal-mask hidden" id="modalMask">
+  <div class="modal" id="modalBox"></div>
+</div>
+<div id="toast" class="toast hidden"></div>
+
+<script src="/app.js"></script>
+</body>
+</html>
