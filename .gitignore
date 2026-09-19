@@ -13,6 +13,9 @@ npm-debug.log*
 .wrangler/
 .dev.vars
 
+# 同步工具配置（里面有 Cloudflare API 令牌，绝对不要提交）
+sync.config.json
+
 # 编辑器、系统垃圾文件
 .vscode/
 .idea/
