@@ -1,0 +1,19 @@
+# ============================================================
+#  实验室物资清点 —— Cloudflare Pages 部署配置（国内可直连的版本）
+#  为什么要有这个：workers.dev 在国内被 DNS 污染打不开，
+#  而 pages.dev 没有被污染，所以同一套代码再发一份到 Pages。
+#
+#  部署：
+#    node cloudflare/build-pages.js
+#    npx wrangler pages deploy dist --project-name=lab-inventory-qwm9527 -c wrangler.pages.toml
+# ============================================================
+
+name = "lab-inventory-qwm9527"
+pages_build_output_dir = "dist"
+compatibility_date = "2025-01-01"
+
+# 和 Workers 版共用同一个云端数据库
+[[d1_databases]]
+binding = "DB"
+database_name = "lab-inventory"
+database_id = "1c8764cf-36f8-40de-a071-d94d725d222b"

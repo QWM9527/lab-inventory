@@ -1,21 +1,23 @@
 # ============================================================
-#  实验室物资清点 —— Cloudflare Workers 部署配置
-#  部署步骤见 README.md 的「六、部署到 Cloudflare（云端版）」
+#  实验室物资清点 —— Cloudflare Pages（国内可直连的版本）
+#
+#  为什么用 Pages：workers.dev 域名在中国大陆被 DNS 污染（解析到假 IP）打不开，
+#  而 pages.dev 没有被污染、Cloudflare 的 IP 国内也能连通，
+#  所以同一套代码再发一份到 Pages，得到一个不用梯子就能打开的网址。
+#
+#  发布：
+#     node cloudflare/build-pages.js
+#     npx wrangler pages deploy dist --project-name=lab-inventory-qwm9527 --branch=main
+#  发布后网址形如 https://lab-inventory-qwm9527.pages.dev
+#
+#  （Workers 版的配置在 wrangler.workers.toml）
 # ============================================================
 
-name = "lab-inventory"
-main = "cloudflare/worker.js"
+name = "lab-inventory-qwm9527"
+pages_build_output_dir = "dist"
 compatibility_date = "2025-01-01"
 
-# 免费版即可；workers.dev 子域名会自动分配
-workers_dev = true
-
-# 前端页面直接使用仓库里的 web/ 目录（和本机版共用同一套文件）
-[assets]
-directory = "web"
-binding = "ASSETS"
-
-# 云数据库（已创建）：npx wrangler d1 create lab-inventory
+# 和 Workers 版共用同一个云端数据库
 [[d1_databases]]
 binding = "DB"
 database_name = "lab-inventory"

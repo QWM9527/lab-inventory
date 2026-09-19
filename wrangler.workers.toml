@@ -1,0 +1,23 @@
+# ============================================================
+#  实验室物资清点 —— Cloudflare Workers（workers.dev 版）
+#  ⚠️ workers.dev 域名在中国大陆被 DNS 污染，打不开。
+#     国内要用请部署 Pages 版（见 wrangler.toml + cloudflare/build-pages.js）。
+#
+#  部署：npx wrangler deploy -c wrangler.workers.toml
+# ============================================================
+
+name = "lab-inventory"
+main = "cloudflare/worker.js"
+compatibility_date = "2025-01-01"
+
+workers_dev = true
+
+# 前端页面直接使用仓库里的 web/ 目录（和本机版共用同一套文件）
+[assets]
+directory = "web"
+binding = "ASSETS"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "lab-inventory"
+database_id = "1c8764cf-36f8-40de-a071-d94d725d222b"

@@ -17,15 +17,26 @@
 
 | | **本机版** | **云端版** |
 | --- | --- | --- |
-| 怎么打开 | 双击 `启动.bat` | 打开网址（`*.workers.dev`） |
+| 怎么打开 | 双击 `启动.bat` | 打开网址 |
 | 数据存哪 | 这台电脑的 `data/db.json` | Cloudflare 的 D1 数据库 |
 | 电脑关机 | 打不开 | 照常能用 |
-| 手机访问 | 连同一个 WiFi 即可 | 任何网络都行（但见下） |
-| 中国大陆直连 | ✅ 局域网内没问题 | ❌ `workers.dev` 被墙，需要代理 |
+| 手机访问 | 连同一个 WiFi 即可 | 任何网络都行 |
+| 中国大陆直连 | ✅ 局域网内没问题 | ✅ 用 `pages.dev` 网址（见下） |
 
-> ⚠️ **两个版本的数据是分开的，不会互相同步。** 页面左上角会显示
+**云端版有两个网址，指向同一个数据库、同一份数据：**
+
+| 网址 | 国内直连 | 说明 |
+| --- | :---: | --- |
+| `https://lab-inventory-qwm9527.pages.dev` | ✅ | Cloudflare Pages，**推荐日常使用** |
+| `https://lab-inventory.qwm9527-lab.workers.dev` | ❌ 需代理 | Cloudflare Workers，`workers.dev` 域名被墙 |
+
+> 为什么搞两个：`workers.dev` 在国内被 DNS 污染（解析到假 IP，打不开），而 `pages.dev` 没有被污染，
+> Cloudflare 的 IP 国内也能连通，所以同一套代码又发布了一份到 Pages。
+
+> ⚠️ **本机版和云端版的数据是分开的，不会自动同步。** 页面左上角会显示
 > <b>本机版</b> / <b>云端版</b> 的小标签，录入之前先看一眼，别两边各录一半。
-> 建议日常固定只用其中一个。
+> 需要对齐两边数据时，双击 `同步数据.bat`（见第七节）。
+> 而云端版的两个网址共用同一个数据库，**互不冲突，随便用哪个**。
 
 ## 一、怎么运行
 
@@ -178,52 +189,56 @@ Python 版参数完全一样：`python lab_inventory.py --host 0.0.0.0 --open`
 ## 六、部署到 Cloudflare（云端版，可选）
 
 本机版要求「电脑开着 + 黑窗口开着」才能访问。如果想让手机在外面也能随时打开、网址还固定不变，
-可以把后端部署到 **Cloudflare Workers + D1**（免费额度足够实验室用）。
+可以把后端部署到 Cloudflare（免费额度足够实验室用）。
 
-云端版和本机版**功能完全一致、接口一致**，前端 `web/` 目录两边共用；区别只是数据从本机文件
+云端版和本机版**功能完全一致、接口一致**，前端 `web/` 目录三边共用；区别只是数据从本机文件
 换成了 Cloudflare 的 D1 数据库。
 
 ```
-cloudflare/worker.js       云端后端（Workers）
+cloudflare/worker.js       云端后端（Workers / Pages 通用）
 cloudflare/schema.sql      D1 数据库结构
 cloudflare/test-local.mjs  本地自测脚本（不用账号也能跑，47 项检查）
-wrangler.toml              部署配置
+cloudflare/build-pages.js  打包 Pages 发布目录 dist/
+wrangler.toml              Pages 部署配置（国内可直连，推荐）
+wrangler.workers.toml      Workers 部署配置（workers.dev 国内被墙）
 ```
 
-**部署步骤**
+**方式一：部署到 Pages（推荐，国内不用梯子）**
 
 ```bash
-# 0. 先注册 Cloudflare 账号（免费）：https://dash.cloudflare.com/sign-up
-
-# 1. 授权（会打开浏览器，点 Allow）
-npx wrangler login
-
-# 2. 建云端数据库，把输出的 database_id 填进 wrangler.toml
-npx wrangler d1 create lab-inventory
-
-# 3. 建表
+npx wrangler login                                             # 浏览器点 Allow
+npx wrangler d1 create lab-inventory                           # 记下 database_id
 npx wrangler d1 execute lab-inventory --remote --file=cloudflare/schema.sql
-
-# 4. 建第一个超级管理员（把 <哈希> 换成下面脚本生成的）
-#    node -e "const{pbkdf2Sync,randomBytes}=require('node:crypto');const s=randomBytes(16).toString('hex');console.log(s+'$'+pbkdf2Sync('你的密码',s,25000,32,'sha256').toString('hex'))"
-npx wrangler d1 execute lab-inventory --remote --command \
-  "INSERT INTO users(username,display_name,pwd,role,active,created_at) VALUES('root','超级管理员','<哈希>','super',1,'2025-01-01 00:00:00')"
-
-# 5. 部署
-npx wrangler deploy
-# 输出形如 https://lab-inventory.<你的子域名>.workers.dev
+npx wrangler pages project create lab-inventory-qwm9527 --production-branch=main
+node cloudflare/build-pages.js
+npx wrangler pages deploy dist --project-name=lab-inventory-qwm9527 --branch=main
+# 网址：https://lab-inventory-qwm9527.pages.dev
 ```
 
-**改完代码后重新部署**：`npx wrangler deploy`（前端文件会自动一起上传）
+**方式二：部署到 Workers（`workers.dev` 国内被 DNS 污染，需要代理才能访问）**
 
-**本地自测**（不需要 Cloudflare 账号，用 Node 内置 SQLite 模拟 D1 跑真实 Worker 代码）：
+```bash
+npx wrangler deploy -c wrangler.workers.toml
+```
+
+**建第一个超级管理员**（Pages / Workers 通用，哈希用下面脚本生成）
+
+```bash
+# node -e "const{pbkdf2Sync,randomBytes}=require('node:crypto');const s=randomBytes(16).toString('hex');console.log(s+'$'+pbkdf2Sync('你的密码',s,25000,32,'sha256').toString('hex'))"
+npx wrangler d1 execute lab-inventory --remote --command \
+  "INSERT INTO users(username,display_name,pwd,role,active,created_at) VALUES('root','超级管理员','<哈希>','super',1,'2025-01-01 00:00:00')"
+```
+
+**改完代码后重新部署**：Pages 走一遍打包 + deploy 两条命令；Workers 走 `wrangler deploy -c wrangler.workers.toml`。
+
+**本地自测**（不需要 Cloudflare 账号，用 Node 内置 SQLite 模拟 D1 跑真实代码）：
 
 ```bash
 node cloudflare/test-local.mjs
 ```
 
 > 注意：云端版的密码哈希迭代次数是 25000（本机版是 200000），
-> 这是为了不超过 Workers 免费版每次请求 10ms 的 CPU 限制；配合登录失败锁定使用。
+> 这是为了不超过 Workers/Pages 免费版每次请求 10ms 的 CPU 限制；配合登录失败锁定使用。
 > 另外云端版的时间固定按北京时间（UTC+8）记录。
 
 ## 七、本机版 ↔ 云端版 数据同步
@@ -271,11 +286,13 @@ node cloudflare/test-local.mjs
 │  ├─ index.html
 │  ├─ style.css
 │  └─ app.js
-├─ cloudflare/           ← 云端版（Workers + D1）
+├─ cloudflare/           ← 云端版（Workers / Pages 共用）
 │  ├─ worker.js
 │  ├─ schema.sql
-│  └─ test-local.mjs
-├─ wrangler.toml         ← 云端版部署配置
+│  ├─ test-local.mjs
+│  └─ build-pages.js
+├─ wrangler.toml         ← Pages 部署配置（国内可直连）
+├─ wrangler.workers.toml ← Workers 部署配置（workers.dev 国内被墙）
 └─ data/                 ← 本机版的数据（首次运行自动生成，不提交到仓库）
    ├─ db.json
    └─ backup/

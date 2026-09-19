@@ -13,6 +13,9 @@ npm-debug.log*
 .wrangler/
 .dev.vars
 
+# Pages 打包产物（由 node cloudflare/build-pages.js 生成）
+dist/
+
 # 同步工具配置（里面有 Cloudflare API 令牌，绝对不要提交）
 sync.config.json
 
