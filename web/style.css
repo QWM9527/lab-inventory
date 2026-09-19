@@ -45,6 +45,9 @@ body{
 .badge{background:#eef2ff;color:#4338ca;border-radius:20px;padding:2px 9px;font-size:12px}
 .badge.member{background:#f1f5f9;color:#475569}
 .badge.super{background:#fef3c7;color:#b45309;font-weight:600}
+.badge.mode{margin-left:8px;font-size:11.5px;font-weight:400;vertical-align:middle}
+.badge.mode.cloud{background:#e0f2fe;color:#0369a1}
+.badge.mode.local{background:#f1f5f9;color:#64748b}
 .ver{font-size:11px;color:#b6c2d4;font-weight:400;vertical-align:super}
 
 /* ---------- 统计 ---------- */

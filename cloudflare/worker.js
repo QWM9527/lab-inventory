@@ -187,7 +187,7 @@ async function handleApi(request, env, url) {
     const expires = Date.now() + SESSION_DAYS * 86400000;
     await env.DB.prepare('INSERT INTO sessions(token,user_id,expires_at) VALUES(?,?,?)')
       .bind(token, u.id, expires).run();
-    return json({ user: publicUser(u) }, 200, {
+    return json({ user: publicUser(u), mode: 'cloud' }, 200, {
       'Set-Cookie': `session=${token}; Path=/; HttpOnly; SameSite=Lax; Secure; Max-Age=${SESSION_DAYS * 86400}`,
     });
   }
@@ -202,7 +202,7 @@ async function handleApi(request, env, url) {
 
   if (path === '/api/me' && method === 'GET') {
     const u = await getSessionUser(env, request);
-    return json({ user: u ? publicUser(u) : null });
+    return json({ user: u ? publicUser(u) : null, mode: 'cloud' });
   }
 
   /* ---------- 我的账号 ---------- */
@@ -228,7 +228,7 @@ async function handleApi(request, env, url) {
     }
     await env.DB.prepare('UPDATE users SET username=?, display_name=?, pwd=? WHERE id=?')
       .bind(username, displayName, pwd, u.id).run();
-    return json({ user: publicUser(Object.assign({}, u, { username, display_name: displayName })) });
+    return json({ user: publicUser(Object.assign({}, u, { username, display_name: displayName })), mode: 'cloud' });
   }
 
   /* ---------- 物资 ---------- */

@@ -74,6 +74,24 @@ function showApp() {
 
 /* 按当前登录角色显示/隐藏管理员专属入口 */
 function isAdminRole() { return !!state.me && (state.me.role === 'admin' || state.me.role === 'super'); }
+
+/* 顶部标识：当前用的是本机版还是云端版（两边数据互不相通，必须一眼看清） */
+function renderModeBadge() {
+  var el = $('#modeBadge');
+  if (!el) return;
+  if (state.mode === 'cloud') {
+    el.textContent = '云端版';
+    el.className = 'badge mode cloud';
+    el.title = '数据存在 Cloudflare，关掉电脑也能用';
+  } else if (state.mode === 'local') {
+    el.textContent = '本机版';
+    el.className = 'badge mode local';
+    el.title = '数据存在这台电脑上，两个版本的数据不互通';
+  } else {
+    el.className = 'badge mode hidden';
+  }
+}
+
 function applyRoleUI() {
   var isAdmin = isAdminRole();
   var isSuper = !!state.me && state.me.role === 'super';
@@ -83,6 +101,7 @@ function applyRoleUI() {
   $('#whoName').textContent = state.me.display_name + '（' + state.me.username + '）';
   $('#whoRole').textContent = isSuper ? '超级管理员' : (isAdmin ? '管理员' : '普通成员');
   $('#whoRole').className = 'badge' + (isSuper ? ' super' : (isAdmin ? '' : ' member'));
+  renderModeBadge();
 }
 
 $('#loginForm').addEventListener('submit', async function (e) {
@@ -92,6 +111,7 @@ $('#loginForm').addEventListener('submit', async function (e) {
   try {
     var r = await api('/api/login', { method: 'POST', body: { username: f.username.value.trim(), password: f.password.value } });
     state.me = r.user;
+    state.mode = r.mode || state.mode;
     f.reset();
     showApp();
     toast('欢迎回来，' + state.me.display_name);
@@ -585,6 +605,7 @@ async function refreshMe() {
   var r = await api('/api/me');
   if (!r.user) { showLogin(); return; }
   state.me = r.user;
+  state.mode = r.mode || state.mode;
   applyRoleUI();
   if (isAdminRole()) loadUsers();
 }
@@ -602,6 +623,7 @@ $('#btnNewItem').addEventListener('click', function () { itemForm(null); });
 (async function boot() {
   try {
     var r = await api('/api/me');
-    if (r.user) { state.me = r.user; showApp(); } else showLogin();
+    state.mode = r.mode || null;
+    if (r.user) { state.me = r.user; showApp(); } else { showLogin(); renderModeBadge(); }
   } catch (e) { showLogin(); }
 })();

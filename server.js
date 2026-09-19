@@ -339,7 +339,7 @@ async function handleApi(req, res, pathname, query) {
     const token = crypto.randomBytes(32).toString('hex');
     db.sessions[token] = { user_id: u.id, expires: Date.now() + SESSION_DAYS * 86400000 };
     saveDb();
-    sendJson(res, 200, { user: publicUser(u) },
+    sendJson(res, 200, { user: publicUser(u), mode: 'local' },
       { 'Set-Cookie': `session=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${SESSION_DAYS * 86400}` });
     return true;
   }
@@ -354,7 +354,7 @@ async function handleApi(req, res, pathname, query) {
 
   if (pathname === '/api/me' && method === 'GET') {
     const u = currentUser(req);
-    sendJson(res, 200, { user: u ? publicUser(u) : null });
+    sendJson(res, 200, { user: u ? publicUser(u) : null, mode: 'local' });
     return true;
   }
 
@@ -390,7 +390,7 @@ async function handleApi(req, res, pathname, query) {
       if (isSuper(u)) { try { fs.unlinkSync(SUPER_PWD_FILE); } catch (e) { /* 已经没有就算了 */ } }
     }
     saveDb();
-    sendJson(res, 200, { user: publicUser(u) });
+    sendJson(res, 200, { user: publicUser(u), mode: 'local' });
     return true;
   }
 
